@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 export function useTrialStream() {
   const [status, setStatus] = useState('idle'); // 'idle', 'running', 'error', 'done'
@@ -14,8 +14,18 @@ export function useTrialStream() {
   const [judgeDone, setJudgeDone] = useState(false);
   
   const [verdict, setVerdict] = useState(null);
+  const [caseDetails, setCaseDetails] = useState(null);
+  const controllerRef = useRef(null);
+
+  const cancelTrial = useCallback(() => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+  }, []);
+
+  useEffect(() => cancelTrial, [cancelTrial]);
 
   const reset = useCallback(() => {
+    cancelTrial();
     setStatus('idle');
     setErrorMsg('');
     setProsecutor('');
@@ -25,21 +35,27 @@ export function useTrialStream() {
     setJudge('');
     setJudgeDone(false);
     setVerdict(null);
-  }, []);
+    setCaseDetails(null);
+  }, [cancelTrial]);
 
   const runTrial = useCallback(async (product, price, sellerRating) => {
     reset();
+    const controller = new AbortController();
+    controllerRef.current = controller;
     setStatus('running');
+    setCaseDetails({ product, price, sellerRating: sellerRating ?? null });
 
     try {
       const response = await fetch("/api/trial", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, price, sellerRating: sellerRating || null }),
+        body: JSON.stringify({ product, price, sellerRating: sellerRating ?? null }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error || `The court could not start (${response.status}).`);
       }
 
       const reader = response.body.getReader();
@@ -87,18 +103,19 @@ export function useTrialStream() {
             case 'judge':
               setJudge(prev => prev + data.chunk);
               break;
-            case 'judge_done':
-              setJudgeDone(true); // although 'verdict' and 'done' follow, we might want this
-              break;
             case 'verdict':
+              setJudgeDone(true);
               setVerdict(data);
               break;
             case 'error':
               setStatus('error');
               setErrorMsg(data.message || 'An unknown error occurred.');
+              controllerRef.current = null;
               return;
             case 'done':
+              setJudgeDone(true);
               setStatus('done');
+              controllerRef.current = null;
               return;
             default:
               console.warn("Unknown event:", eventName);
@@ -106,12 +123,16 @@ export function useTrialStream() {
         }
       }
       
+      setJudgeDone(true);
       setStatus('done');
 
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.error(err);
       setStatus('error');
       setErrorMsg(err.message || 'Failed to connect to the trial stream.');
+    } finally {
+      if (controllerRef.current === controller) controllerRef.current = null;
     }
   }, [reset]);
 
@@ -125,6 +146,7 @@ export function useTrialStream() {
     judge,
     judgeDone,
     verdict,
+    caseDetails,
     runTrial,
     reset
   };

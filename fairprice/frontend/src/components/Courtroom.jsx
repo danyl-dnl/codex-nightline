@@ -91,6 +91,7 @@ export default function Courtroom({
   judge,
   judgeDone,
   verdict,
+  caseDetails,
   onRetry
 }) {
   const scrollRef = useRef(null);
@@ -113,6 +114,14 @@ export default function Courtroom({
     );
   }
 
+  const activeSpeaker = !prosecutorDone
+    ? 'Prosecutor is presenting the case'
+    : !defenseDone
+      ? 'Defense is responding'
+      : !judgeDone
+        ? 'Judge is weighing the evidence'
+        : 'Court adjourned';
+
   if (status === 'error') {
     return (
       <div className="h-full w-full flex items-center justify-center glass-panel rounded-3xl p-12 text-center border-accent-red/30 relative overflow-hidden">
@@ -134,10 +143,18 @@ export default function Courtroom({
 
   return (
     <div className="h-full w-full flex flex-col glass-panel rounded-3xl overflow-hidden shadow-2xl bg-[#0d1117]/80">
-      <div className="bg-black/40 p-4 border-b border-white/10 flex justify-between items-center z-10">
-        <div className="flex items-center gap-2">
-          <Scale className="text-accent-gold" size={20} />
-          <span className="font-semibold tracking-wide text-white">Court is in Session</span>
+      <div className="bg-black/40 p-4 border-b border-white/10 flex justify-between items-center gap-4 z-10">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Scale className="text-accent-gold shrink-0" size={20} />
+            <span className="font-semibold tracking-wide text-white">Court is in Session</span>
+          </div>
+          {caseDetails && (
+            <p className="mt-1 truncate text-xs text-gray-500">
+              {caseDetails.product} · ₹{Number(caseDetails.price).toLocaleString('en-IN')}
+              {caseDetails.sellerRating !== null && ` · ${caseDetails.sellerRating}/5 seller`}
+            </p>
+          )}
         </div>
         {status === 'running' && (
           <div className="flex items-center gap-2 text-xs text-gray-400 bg-white/5 px-3 py-1 rounded-full">
@@ -148,6 +165,10 @@ export default function Courtroom({
             LIVE
           </div>
         )}
+      </div>
+
+      <div className="px-4 py-2 border-b border-white/5 bg-white/[0.02] text-xs text-gray-500">
+        {activeSpeaker}
       </div>
 
       <div 
