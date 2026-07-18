@@ -9,7 +9,7 @@ import {
   prosecutorPrompt,
 } from "./lib/prompts.js";
 
-const ASSESSMENT_VERSION = "3";
+const ASSESSMENT_VERSION = "4";
 
 function writeEvent(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -22,7 +22,7 @@ function writeSseHeaders(res) {
   res.flushHeaders?.();
 }
 
-function validationError(product, price, sellerRating) {
+function validationError(product, price, sellerRating, listingDetails) {
   if (typeof product !== "string" || !product.trim()) return "Enter a product name.";
   if (product.trim().length > 160) return "Product name must be 160 characters or fewer.";
   if (typeof price !== "number" || !Number.isFinite(price) || price < 0) return "Enter a valid non-negative price.";
@@ -30,6 +30,10 @@ function validationError(product, price, sellerRating) {
   if (sellerRating != null && (typeof sellerRating !== "number" || !Number.isFinite(sellerRating) || sellerRating < 1 || sellerRating > 5)) {
     return "Seller rating must be between 1 and 5.";
   }
+  if (listingDetails != null && (typeof listingDetails !== "object" || Array.isArray(listingDetails))) return "Listing details must be valid.";
+  if (listingDetails?.condition != null && !["new", "used", "refurbished", "unknown"].includes(listingDetails.condition)) return "Choose a valid item condition.";
+  if (listingDetails?.warranty != null && (typeof listingDetails.warranty !== "string" || listingDetails.warranty.length > 80)) return "Warranty details must be 80 characters or fewer.";
+  if (listingDetails?.details != null && (typeof listingDetails.details !== "string" || listingDetails.details.length > 500)) return "Listing details must be 500 characters or fewer.";
   return null;
 }
 
@@ -41,8 +45,8 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") return res.status(200).json({ status: "ok", service: "fair-price" });
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-    const { product, price, sellerRating: requestedSellerRating } = req.body || {};
-    const invalidMessage = validationError(product, price, requestedSellerRating);
+    const { product, price, sellerRating: requestedSellerRating, listingDetails: requestedListingDetails } = req.body || {};
+    const invalidMessage = validationError(product, price, requestedSellerRating, requestedListingDetails);
     if (invalidMessage) return res.status(400).json({ error: invalidMessage });
 
     const clientKey = String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "anonymous").split(",")[0].trim();
@@ -50,6 +54,11 @@ export default async function handler(req, res) {
 
     const cleanProduct = product.trim();
     const sellerRating = requestedSellerRating ?? null;
+    const listingDetails = {
+      condition: requestedListingDetails?.condition ?? "unknown",
+      warranty: requestedListingDetails?.warranty?.trim() ?? "",
+      details: requestedListingDetails?.details?.trim() ?? "",
+    };
     let { benchmark, confidence } = matchBenchmark(cleanProduct);
     let sources = [];
     if (!benchmark) {
@@ -64,8 +73,8 @@ export default async function handler(req, res) {
         logTrial("research_failed", { reason: error.message });
       }
     }
-    const caseMetadata = { product: cleanProduct, price, sellerRating, benchmark, confidence, sources, liveResearch: Boolean(sources.length) };
-    const cacheKey = JSON.stringify([ASSESSMENT_VERSION, cleanProduct.toLowerCase(), price, sellerRating]);
+    const caseMetadata = { product: cleanProduct, price, sellerRating, listingDetails, benchmark, confidence, sources, liveResearch: Boolean(sources.length) };
+    const cacheKey = JSON.stringify([ASSESSMENT_VERSION, cleanProduct.toLowerCase(), price, sellerRating, listingDetails]);
     const cached = getCachedTrial(cacheKey);
 
     writeSseHeaders(res);
@@ -88,7 +97,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const caseContext = createCaseContext(cleanProduct, price, sellerRating, benchmark, confidence);
+    const caseContext = createCaseContext(cleanProduct, price, sellerRating, benchmark, confidence, listingDetails);
     const sharedInstructions = createSharedInstructions();
     const replay = [];
     const send = (event, data) => {
@@ -120,7 +129,7 @@ export default async function handler(req, res) {
       signal: requestController.signal,
     });
 
-    const verdict = createEvidenceVerdict(price, benchmark, sellerRating);
+    const verdict = createEvidenceVerdict(price, benchmark, sellerRating, listingDetails);
     verdict.label = priceLabel(verdict.score);
     verdict.confidence = confidence;
     send("verdict", verdict);

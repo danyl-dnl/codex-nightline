@@ -7,8 +7,8 @@ export default function TrialHistory({ items, onSelect, onClear, isRunning }) {
   return (
     <section className="glass-panel rounded-2xl p-5">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-bold text-white"><History size={16} className="text-accent-gold" /> Recent trials</div>
-        <button onClick={onClear} disabled={isRunning} className="text-xs text-gray-500 hover:text-white">Clear</button>
+        <div className="flex items-center gap-2 text-sm font-bold text-white"><History size={16} className="text-accent-gold" /> Your past price checks</div>
+        <button onClick={onClear} disabled={isRunning} className="text-xs text-gray-500 hover:text-white">Clear list</button>
       </div>
       <div className="space-y-2">
         {items.slice(0, 4).map((item) => (

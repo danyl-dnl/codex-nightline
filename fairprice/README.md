@@ -50,6 +50,12 @@ The web app runs at `http://localhost:5173`; Vite proxies `/api` traffic to the 
 
 `GET /api/trial` is a lightweight health check for local and deployment monitoring.
 
+## Import a listing
+
+Users can upload a PNG, JPEG, WEBP, or GIF listing screenshot (up to 2.5 MB), or paste a public listing URL. `POST /api/import-listing` extracts a suggested product, INR price, seller rating, condition, warranty, and listing notes. The browser always presents the extracted fields for review before a trial is submitted.
+
+Screenshot import uses the configured `OPENAI_MODEL`. Public-link import uses `OPENAI_RESEARCH_MODEL` (default `gpt-5.4`) and can only import listings that can be verified from public web results.
+
 ## Scripts
 
 | Command | Purpose |

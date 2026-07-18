@@ -35,9 +35,49 @@ export function createFallbackVerdict(price, benchmark) {
   return { ...createEvidenceVerdict(price, benchmark), fallback: true };
 }
 
-export function createEvidenceVerdict(price, benchmark, sellerRating = null) {
+function fairPriceGuidance(price, benchmark, sellerRating, listingDetails) {
   if (!benchmark) {
-    return { score: 50, verdict: "Insufficient comparable data; treat this assessment as low confidence." };
+    return {
+      targetPrice: null,
+      targetMessage: "Add two or more close comparable listings before relying on a price target.",
+      actions: ["Confirm the exact model, condition, and included accessories.", "Compare at least two recent listings for the same variant."],
+    };
+  }
+
+  const [low, high] = benchmark.typicalPriceRange;
+  const actions = [];
+  if (price > high) {
+    actions.push(`A price at or below ₹${high.toLocaleString("en-IN")} aligns with the current comparable range.`);
+    if (listingDetails?.condition === "unknown") actions.push("Document the condition with clear photos or inspection details to support a premium.");
+    if (!listingDetails?.warranty) actions.push("Confirm remaining warranty or return protection before paying above-range pricing.");
+    if (sellerRating == null || sellerRating < benchmark.avgRating) actions.push("Ask for stronger seller history, proof of purchase, or buyer protection.");
+    return { targetPrice: high, targetMessage: "Comparable-range target", actions: actions.slice(0, 3) };
+  }
+  if (price < low) {
+    return {
+      targetPrice: low,
+      targetMessage: "Lower edge of the typical range",
+      actions: ["Check condition and completeness carefully—an unusually low price can reflect missing details.", "Verify that the exact model and included accessories match the listing."],
+    };
+  }
+  return {
+    targetPrice: high,
+    targetMessage: "Upper edge of the typical range",
+    actions: ["The price already sits within the comparable range.", "Verify condition and warranty before paying closer to the upper edge."],
+  };
+}
+
+export function createEvidenceVerdict(price, benchmark, sellerRating = null, listingDetails = {}) {
+  if (!benchmark) {
+    return {
+      score: 50,
+      verdict: "Insufficient comparable data; treat this assessment as low confidence.",
+      breakdown: [
+        { label: "Comparable evidence", detail: "No close price range found", impact: "unknown" },
+        { label: "Seller rating", detail: sellerRating == null ? "Not supplied" : `${sellerRating}/5`, impact: "neutral" },
+      ],
+      ...fairPriceGuidance(price, benchmark, sellerRating, listingDetails),
+    };
   }
 
   const [low, high] = benchmark.typicalPriceRange;
@@ -57,7 +97,25 @@ export function createEvidenceVerdict(price, benchmark, sellerRating = null) {
       ? "Priced above the typical range; ask what justifies the premium."
       : "Within the typical range for comparable listings.";
 
-  return { score, verdict };
+  const pricePosition = price < low
+    ? "Below the typical range"
+    : price > high
+      ? "Above the typical range"
+      : "Within the typical range";
+  const ratingDetail = sellerRating == null
+    ? "Not supplied; no adjustment"
+    : `${sellerRating}/5 vs typical ${benchmark.avgRating}/5 (${ratingAdjustment >= 0 ? "+" : ""}${ratingAdjustment} points)`;
+
+  return {
+    score,
+    verdict,
+    breakdown: [
+      { label: "Comparable price range", detail: `₹${low.toLocaleString("en-IN")}–₹${high.toLocaleString("en-IN")}`, impact: pricePosition },
+      { label: "Listed price", detail: `₹${price.toLocaleString("en-IN")}`, impact: pricePosition },
+      { label: "Seller rating", detail: ratingDetail, impact: ratingAdjustment > 0 ? "positive" : ratingAdjustment < 0 ? "negative" : "neutral" },
+    ],
+    ...fairPriceGuidance(price, benchmark, sellerRating, listingDetails),
+  };
 }
 
 export function priceLabel(score) {

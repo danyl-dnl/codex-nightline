@@ -38,18 +38,18 @@ export function useTrialStream() {
     setCaseDetails(null);
   }, [cancelTrial]);
 
-  const runTrial = useCallback(async (product, price, sellerRating) => {
+  const runTrial = useCallback(async (product, price, sellerRating, listingDetails = {}) => {
     reset();
     const controller = new AbortController();
     controllerRef.current = controller;
     setStatus('running');
-    setCaseDetails({ product, price, sellerRating: sellerRating ?? null });
+    setCaseDetails({ product, price, sellerRating: sellerRating ?? null, listingDetails });
 
     try {
       const response = await fetch("/api/trial", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, price, sellerRating: sellerRating ?? null }),
+        body: JSON.stringify({ product, price, sellerRating: sellerRating ?? null, listingDetails }),
         signal: controller.signal,
       });
 
@@ -93,6 +93,7 @@ export function useTrialStream() {
                 product: data.product,
                 price: data.price,
                 sellerRating: data.sellerRating ?? null,
+                listingDetails: data.listingDetails ?? {},
                 benchmark: data.benchmark ?? null,
                 confidence: data.confidence ?? 'low',
                 cached: Boolean(data.cached),

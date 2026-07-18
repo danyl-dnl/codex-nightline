@@ -42,8 +42,9 @@ function App() {
             </h1>
           </div>
           <p className="text-gray-400 text-lg max-w-xl">
-            Don't take our word for it that the price is fair — put it on trial.
+            Type in an item and its price. We will help you decide if it looks fair.
           </p>
+          <p className="mt-2 text-sm text-gray-600">No shopping jargon. Just a simple price check.</p>
         </header>
 
         {/* Main Content Layout */}
@@ -69,7 +70,7 @@ function App() {
               items={history}
               isRunning={isRunning}
               onClear={clearHistory}
-              onSelect={(item) => trialStream.runTrial(item.product, item.price, item.sellerRating)}
+              onSelect={(item) => trialStream.runTrial(item.product, item.price, item.sellerRating, item.listingDetails)}
             />
           </div>
 

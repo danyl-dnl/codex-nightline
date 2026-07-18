@@ -1,9 +1,15 @@
-export function createCaseContext(product, price, sellerRating, benchmark, confidence) {
+export function createCaseContext(product, price, sellerRating, benchmark, confidence, listingDetails = {}) {
   const comparable = benchmark
     ? `Matched benchmark: ${benchmark.category}\nTypical price range: INR ${benchmark.typicalPriceRange[0]}–${benchmark.typicalPriceRange[1]}\nTypical seller rating: ${benchmark.avgRating}/5\nBenchmark notes: ${benchmark.notes}\nMatch confidence: ${confidence}`
     : "Matched benchmark: none\nMatch confidence: low\nEvidence limit: insufficient comparable data";
 
-  return `Product: ${product}\nListed price: INR ${price}\nSeller rating: ${sellerRating ?? "unknown"}\n${comparable}`;
+  const listingEvidence = [
+    listingDetails.condition && listingDetails.condition !== "unknown" ? `Condition: ${listingDetails.condition}` : null,
+    listingDetails.warranty ? `Warranty: ${listingDetails.warranty}` : null,
+    listingDetails.details ? `Seller-provided details: ${listingDetails.details}` : null,
+  ].filter(Boolean).join("\n") || "Listing details: not supplied";
+
+  return `Product: ${product}\nListed price: INR ${price}\nSeller rating: ${sellerRating ?? "unknown"}\n${listingEvidence}\n${comparable}`;
 }
 
 export function createSharedInstructions() {

@@ -32,12 +32,17 @@ test("evidence verdict gets stricter as a listing moves above its benchmark", ()
   const aboveRange = createEvidenceVerdict(6000, benchmark, 4.0);
   assert.ok(withinRange.score > aboveRange.score);
   assert.equal(aboveRange.verdict, "Priced above the typical range; ask what justifies the premium.");
+  assert.equal(aboveRange.breakdown[1].impact, "Above the typical range");
+  assert.equal(aboveRange.targetPrice, 3500);
+  assert.match(aboveRange.actions[0], /₹3,500/);
 });
 
 test("evidence verdict reports uncertainty without a close benchmark", () => {
   const verdict = createEvidenceVerdict(5000, null);
   assert.equal(verdict.score, 50);
   assert.match(verdict.verdict, /Insufficient comparable data/);
+  assert.equal(verdict.breakdown[0].impact, "unknown");
+  assert.equal(verdict.targetPrice, null);
 });
 
 test("rate limiter resets after its time window", () => {

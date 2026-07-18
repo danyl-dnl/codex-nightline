@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import trialHandler from "./api/trial.js";
+import importListingHandler from "./api/import-listing.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(currentDirectory, ".env.local") });
@@ -10,8 +11,9 @@ dotenv.config({ path: path.join(currentDirectory, ".env.local") });
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "4mb" }));
 app.all("/api/trial", (req, res) => trialHandler(req, res));
+app.all("/api/import-listing", (req, res) => importListingHandler(req, res));
 
 const server = app.listen(port, () => {
   console.log(`Fair Price API listening at http://localhost:${port}`);
