@@ -48,6 +48,8 @@ npm run dev:web
 
 The web app runs at `http://localhost:5173`; Vite proxies `/api` traffic to the local API at `http://127.0.0.1:3000`.
 
+`GET /api/trial` is a lightweight health check for local and deployment monitoring.
+
 ## Scripts
 
 | Command | Purpose |
@@ -66,7 +68,9 @@ The web app runs at `http://localhost:5173`; Vite proxies `/api` traffic to the 
 { "product": "Wireless earbuds", "price": 2499, "sellerRating": 4.1 }
 ```
 
-It responds as an SSE stream. Events arrive in this order: `prosecutor`, `prosecutor_done`, `defense`, `defense_done`, `judge`, `verdict`, and `done`. The `verdict` payload is `{ "score": number, "verdict": string }`.
+It responds as an SSE stream. Events arrive in this order: `case`, `prosecutor`, `prosecutor_done`, `defense`, `defense_done`, `judge`, `verdict`, and `done`. The `case` payload includes the closest benchmark and match confidence. The `verdict` payload includes `{ "score": number, "verdict": string, "label": string, "confidence": string }`.
+
+The endpoint validates inputs, applies an in-memory per-client rate limit, times out and retries transient upstream calls, caches completed identical trials for five minutes, and uses a benchmark-based fallback if the structured verdict call fails.
 
 ## Deployment
 

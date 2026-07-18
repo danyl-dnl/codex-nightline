@@ -1,17 +1,35 @@
-import React from 'react';
-import CaseInput from './components/CaseInput';
+import React, { useEffect, useState } from 'react';
 import ProveIt from './components/ProveIt';
 import Courtroom from './components/Courtroom';
+import TrialHistory from './components/TrialHistory';
 import { useTrialStream } from './hooks/useTrialStream';
 import { Scale } from 'lucide-react';
 
 function App() {
   const trialStream = useTrialStream();
   const isRunning = trialStream.status === 'running';
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('fair-price-history') || '[]'); } catch { return []; }
+  });
+
+  useEffect(() => {
+    if (trialStream.status !== 'done' || !trialStream.verdict || !trialStream.caseDetails) return;
+    const item = { id: `${Date.now()}-${Math.random()}`, ...trialStream.caseDetails, ...trialStream.verdict };
+    setHistory((previous) => {
+      const next = [item, ...previous].slice(0, 8);
+      localStorage.setItem('fair-price-history', JSON.stringify(next));
+      return next;
+    });
+  }, [trialStream.status, trialStream.verdict, trialStream.caseDetails]);
+
+  const clearHistory = () => {
+    localStorage.removeItem('fair-price-history');
+    setHistory([]);
+  };
 
   return (
     <div className="min-h-screen bg-[#06080b] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#06080b] to-black text-gray-100 p-4 md:p-8 font-sans">
-      <div className="max-w-6xl mx-auto flex flex-col gap-8 h-[calc(100vh-4rem)]">
+      <div className="max-w-6xl mx-auto flex flex-col gap-8 lg:h-[calc(100vh-4rem)]">
         
         {/* Header Area */}
         <header className="flex flex-col items-center justify-center text-center mt-4">
@@ -29,21 +47,10 @@ function App() {
         </header>
 
         {/* Main Content Layout */}
-        <main className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+        <main className="flex flex-col gap-6 lg:grid lg:grid-cols-3 lg:flex-1 lg:min-h-0">
           
           {/* Left Column: Inputs */}
-          <div className="w-full lg:w-1/3 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 lg:pr-4 shrink-0">
-            <CaseInput 
-              onRunDemo={trialStream.runTrial} 
-              isRunning={isRunning} 
-            />
-            
-            <div className="flex items-center gap-4 px-4">
-              <div className="h-px bg-white/10 flex-1"></div>
-              <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">OR</span>
-              <div className="h-px bg-white/10 flex-1"></div>
-            </div>
-
+          <div className="w-full lg:w-auto flex flex-col gap-6 lg:overflow-y-auto lg:[&>*]:shrink-0 custom-scrollbar pr-0 lg:pr-4 shrink-0">
             <ProveIt 
               onRunLive={trialStream.runTrial} 
               isRunning={isRunning} 
@@ -57,10 +64,17 @@ function App() {
                 Start New Trial
               </button>
             )}
+
+            <TrialHistory
+              items={history}
+              isRunning={isRunning}
+              onClear={clearHistory}
+              onSelect={(item) => trialStream.runTrial(item.product, item.price, item.sellerRating)}
+            />
           </div>
 
           {/* Right Column: Courtroom */}
-          <div className="w-full lg:w-2/3 h-[600px] lg:h-full shrink-0 lg:shrink">
+          <div className="w-full lg:col-span-2 lg:w-auto h-[600px] lg:h-full min-w-0 shrink-0">
             <Courtroom 
               {...trialStream}
               onRetry={trialStream.reset}

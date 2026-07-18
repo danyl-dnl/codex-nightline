@@ -4,11 +4,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev:api",
+    "dev": "node dev.js",
     "dev:api": "node server.js",
     "dev:web": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
+    "test": "node --test",
     "start": "node server.js"
   },
   "engines": {

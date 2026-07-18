@@ -16,6 +16,18 @@ export default function ProveIt({ onRunLive, isRunning }) {
     );
   };
 
+  const suggestedCases = [
+    ['Used iPhone 12', 24500, 4.4],
+    ['Office chair', 12999, 4.0],
+    ['Logo design', 4500, 4.8],
+  ];
+
+  const applySuggestion = ([nextProduct, nextPrice, nextRating]) => {
+    setProduct(nextProduct);
+    setPrice(String(nextPrice));
+    setSellerRating(String(nextRating));
+  };
+
   return (
     <div className="glass-panel p-6 rounded-2xl border-t-2 border-t-accent-gold/50 relative overflow-hidden">
       <div className="absolute top-0 right-0 bg-accent-gold/20 text-accent-gold text-[10px] font-bold px-3 py-1 uppercase tracking-wider rounded-bl-lg">
@@ -26,6 +38,17 @@ export default function ProveIt({ onRunLive, isRunning }) {
       <p className="text-sm text-gray-400 mb-6">
         Don't take our word for it that the price is fair — type your own case in right now.
       </p>
+
+      <div className="mb-5">
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">Try a case</p>
+        <div className="flex flex-wrap gap-2">
+          {suggestedCases.map((suggestion) => (
+            <button key={suggestion[0]} type="button" disabled={isRunning} onClick={() => applySuggestion(suggestion)} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-gray-400 transition hover:border-accent-gold/40 hover:text-accent-gold disabled:opacity-50">
+              {suggestion[0]}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>

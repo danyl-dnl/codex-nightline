@@ -88,6 +88,18 @@ export function useTrialStream() {
           }
 
           switch (eventName) {
+            case 'case':
+              setCaseDetails({
+                product: data.product,
+                price: data.price,
+                sellerRating: data.sellerRating ?? null,
+                benchmark: data.benchmark ?? null,
+                confidence: data.confidence ?? 'low',
+                cached: Boolean(data.cached),
+                liveResearch: Boolean(data.liveResearch),
+                sources: Array.isArray(data.sources) ? data.sources : [],
+              });
+              break;
             case 'prosecutor':
               setProsecutor(prev => prev + data.chunk);
               break;
