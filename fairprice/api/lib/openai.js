@@ -96,8 +96,8 @@ export async function researchComparables({ product, signal }) {
       model: process.env.OPENAI_RESEARCH_MODEL || "gpt-5.4",
       tools: [{ type: "web_search" }],
       tool_choice: "required",
-      max_output_tokens: 300,
-      input: `Research current Indian-market price comparables for this exact product: ${product}. Do not substitute another model, generation, or variant. Return ONLY JSON: {"category":"exact comparable description","typicalPriceRange":[lowINR,highINR],"notes":"brief evidence-based qualification"}. Use a range only when at least two close public comparables support it; otherwise return {"category":"","typicalPriceRange":null,"notes":"insufficient comparable data"}.`,
+      max_output_tokens: 600,
+      input: `Research current Indian-market price comparables for this exact product: ${product}. Do not substitute another model, generation, or variant. Return ONLY JSON: {"category":"exact comparable description","typicalPriceRange":[lowINR,highINR],"notes":"brief evidence-based qualification","sources":[{"title":"source title","url":"https://source-url"}]}. Use a range only when at least two close public comparables support it and include both source URLs; otherwise return {"category":"","typicalPriceRange":null,"notes":"insufficient comparable data","sources":[]}.`,
     }),
     signal,
   });
@@ -106,9 +106,16 @@ export async function researchComparables({ product, signal }) {
   const content = body.output?.find((item) => item.type === "message")?.content?.find((item) => item.type === "output_text");
   const text = content?.text;
   const json = typeof text === "string" ? text.match(/\{[\s\S]*\}/)?.[0] : null;
-  const parsed = json ? JSON.parse(json) : null;
+  let parsed = null;
+  try {
+    parsed = json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  }
   const range = parsed?.typicalPriceRange;
-  const sources = (content?.annotations || []).filter((item) => item.type === "url_citation").map((item) => ({ title: item.title, url: item.url }));
+  const sources = Array.isArray(parsed?.sources)
+    ? parsed.sources.filter((source) => typeof source?.url === "string" && /^https:\/\//.test(source.url)).slice(0, 4).map((source) => ({ title: String(source.title || "Comparable listing"), url: source.url }))
+    : [];
   if (!Array.isArray(range) || range.length !== 2 || !range.every((value) => Number.isFinite(Number(value))) || Number(range[0]) >= Number(range[1]) || sources.length < 2) return null;
   return { benchmark: { category: String(parsed.category || product), typicalPriceRange: range.map(Number), avgRating: null, notes: String(parsed.notes || "Live public comparables") }, sources };
 }
